@@ -38,26 +38,20 @@ def database_connection_with_sqlalchemy():
 """Table Structure
 month_data = \"""CREATE TABLE IF NOT EXISTS month_data (
                                       MeterID INT,
-                                      DateTime DATETIME,
+                                      usage_date DATETIME,
                                       KWH FLOAT,
                                       FOREIGN KEY (MeterID) REFERENCES Meter(MeterID)
                                       )\"""
                                       
 
-PredictionTable = \"""CREATE TABLE IF NOT EXISTS predictiontable (
-                                      AreaID INT,
-                                      prediction_date DATETIME,
-                                      KWH FLOAT, 
-                                      PredictAt DATETIME,
-                                      FOREIGN KEY (AreaID) REFERENCES ServiceArea(AreaID)
-                                      )\"""
-
 NEW                                  
 prediction_table = \"""CREATE TABLE IF NOT EXISTS prediction_table (
                                       AreaID INT NOT NULL,
-                                      prediction_date DATETIME NOT NULL,
-                                      KWH FLOAT DEFAULT NULL,
                                       predicted_at DATETIME DEFAULT NULL,
+                                      minimum_KWH FLOAT DEFAULT NULL,
+                                      KWH FLOAT DEFAULT NULL,
+                                      maximum_KWH FLOAT DEFAULT NULL,
+                                      prediction_date DATETIME NOT NULL,
                                       FOREIGN KEY (AreaID) REFERENCES ServiceArea(AreaID)
                                       )\"""
                                       

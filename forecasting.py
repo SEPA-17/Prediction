@@ -9,8 +9,11 @@ import connectToDatabase as connect
 from datetime import datetime
 import time
 import warnings
+# import matplotlib.pyplot as plt # testing
 
 warnings.filterwarnings('ignore')
+
+# ALL lines end with # testing, used for testing only
 
 # --------- Configuration ---------
 """"
@@ -19,12 +22,12 @@ p for AR
 d forx I
 q for MA
 """
-P = Q = range(0, 20)
-D = range(1, 5)
+P = Q = range(5, 9)
+D = range(2, 5)
 PARAMETERS = product(P, D, Q)
 PARAMETERS_LIST = list(PARAMETERS)
 TODAY = datetime.today()
-TABLE_NAME = "predictiontable"
+TABLE_NAME = "prediction_table"
 
 
 # --------- End Configuration ---------
@@ -39,22 +42,23 @@ def get_service_area_id(mydb_connection):
 def get_meter_id(mydb_connection, areaID):
     sql_query_get_meter_id = "Select MeterID from meter WHERE AreaID={0}".format(int(areaID))
     meter_id = connect.read_from_database(sql_query_get_meter_id, mydb_connection)
-    print(meter_id)
-    print(meter_id.shape)
+    print("In get_meter_id function")# testing
+    print(meter_id)# testing
+    print(meter_id.shape)# testing
     meter_id_to_array_in = meter_id.values.reshape(-1, ).tolist()
     return meter_id_to_array_in
 
 
 def get_meter_data(p_meter_id_to_array, mydb_connection):
-    sql_query_get_meter_data = "SELECT DateTime, KWH FROM month_data WHERE MeterID IN {0}".format(tuple(p_meter_id_to_array))
+    sql_query_get_meter_data = "SELECT usage_date, KWH FROM month_data WHERE MeterID IN {0}".format(tuple(p_meter_id_to_array))
     meter_data = connect.read_from_database(sql_query_get_meter_data, mydb_connection)
     meter_data_log_in = resample_data(meter_data)
-    print(meter_data_log_in)#testing
+    print(meter_data_log_in)# testing
     return meter_data_log_in
 
 
 def resample_data(meter_data):
-    meter_data.set_index('DateTime', inplace=True)
+    meter_data.set_index('usage_date', inplace=True)
     meter_data = meter_data.resample('M').sum()
     meter_data_log_in = np.log(meter_data)
     meter_data_log_in.dropna(inplace=True)
@@ -86,16 +90,29 @@ def optimize_ARIMA(parameters_list, meter_data):
     return best_model
 
 
-def reform_predicted_data(metadata, predicted_value):
+def reform_predicted_data(metadata, result_data_in):
+    minimum_result_data_list = []
+    maximum_result_data_list = []
+    result_data_list = result_data_in[0].tolist()
+
+    # Minimum and maximum of future data
+    for x, y in result_data[2]:
+        minimum_result_data_list.append(x)
+        maximum_result_data_list.append(y)
+
     last_of_the_month = metadata.index[-1] + relativedelta(months=+1)
     # last_of_the_month = parser.parse(last_of_the_month)# testing
     next_12_months = metadata.index[-1] + relativedelta(months=+12)
     # next_12_months = parser.parse(next_12_months)# testing
     next_12_months_rng = pd.date_range(start=last_of_the_month, end=next_12_months, freq='M')
     future_meter_data = pd.DataFrame(next_12_months_rng, columns=['prediction_date'])
-    future_meter_data['KWH'] = predicted_value
+    future_meter_data['KWH'] = result_data_list
+    future_meter_data['minimum_KWH'] = minimum_result_data_list
+    future_meter_data['maximum_KWH'] = maximum_result_data_list
     future_meter_data = future_meter_data.set_index('prediction_date')
     future_meter_data = np.exp(future_meter_data)
+    print(future_meter_data)# testing
+
     return future_meter_data
 
 
@@ -114,8 +131,9 @@ if __name__ == "__main__":
             results_ARIMA = best_model.fit()
             # results_ARIMA.plot_predict('2007', '2012')# testing
             result_data = results_ARIMA.forecast(steps=12)
-            result_data_list = result_data[0].tolist()
-            future_data = reform_predicted_data(meter_data_log, result_data_list)
+
+            future_data = reform_predicted_data(meter_data_log, result_data)
+            # sys.exit()# testing
             future_data['AreaID'] = areaId
             future_data['predicted_at'] = TODAY
             connect.insert_to_database(future_data, mydb_sqlalchemy, TABLE_NAME)

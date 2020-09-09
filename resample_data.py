@@ -18,6 +18,8 @@ MONTH = datetime.today().month
 YEAR = datetime.today().year
 
 # --------- Testing ---------
+MONTH = 11
+YEAR = 2017
 months = [x for x in range(1, 13)]
 years = [x for x in range(2006, 2011)]
 print(months)
@@ -41,7 +43,9 @@ This loop through all MeterId:
 
 
 def get_meter_data(meter_id_in, meter_data_in, mydb_connection):
-    meter_data_in.set_index('ReadAt', inplace=True)
+    meter_data_in.rename(columns={'ReadAt': 'usage_date'}, inplace=True)
+    meter_data_in.set_index('usage_date', inplace=True)
+    print(meter_data_in)
     meter_data_in['KWH'] = pd.to_numeric(meter_data_in['KWH'])
     meter_data_in.interpolate(method='linear', inplace=True)
     meter_data_diff = meter_data_in.diff()
@@ -68,6 +72,7 @@ if __name__ == "__main__":
             # sql_query_get_meter_data = "SELECT MAX(Global_active_power) AS KWH, DATE_FORMAT(ReadAt, \"%Y-%m-%d 00:00:00\") AS ReadAt FROM household_power WHERE MeterID={0} GROUP BY YEAR(ReadAt), MONTH(ReadAt), DAY(ReadAt)".format(meter_id)# testing with household_power
             sql_query_get_meter_data = "SELECT MAX(KWH) AS KWH, DATE_FORMAT(ReadAt, \"%Y-%m-%d 00:00:00\") AS ReadAt FROM meterdata WHERE MeterID={0} AND YEAR(ReadAt)={1} AND MONTH(ReadAt)={2} GROUP BY YEAR(ReadAt), MONTH(ReadAt), DAY(ReadAt)".format(meter_id, YEAR, MONTH)# Real Use
             meter_data = connect.read_from_database(sql_query_get_meter_data, mydb_sqlalchemy)
+            print(meter_data)
             get_meter_data(meter_id, meter_data, mydb_sqlalchemy)
             # break# testing
         except TypeError as err: # testing
